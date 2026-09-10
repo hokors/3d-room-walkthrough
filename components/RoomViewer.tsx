@@ -3,12 +3,13 @@
 import { Html, PointerLockControls, useGLTF } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Box3, Vector3 } from "three";
+import { Box3, DoubleSide, Vector3 } from "three";
 import type { PointerLockControls as PointerLockControlsImpl } from "three-stdlib";
 
-const EYE_HEIGHT = 1.65;
+const EYE_HEIGHT = 1.45;
 const WALK_SPEED = 2.7;
 const SPRINT_SPEED = 5.2;
+const MODEL_URL = "/room.glb?v=9_10_2026-ceiling-cap";
 
 type MovementKey = "forward" | "backward" | "left" | "right" | "sprint";
 
@@ -26,21 +27,12 @@ const keyMap: Record<string, MovementKey | undefined> = {
 };
 
 function RoomModel() {
-  const { scene } = useGLTF("/room.glb");
+  const { scene } = useGLTF(MODEL_URL);
 
   const offset = useMemo(() => {
     const bounds = new Box3().setFromObject(scene);
     const center = bounds.getCenter(new Vector3());
     return new Vector3(-center.x, -bounds.min.y, -center.z);
-  }, [scene]);
-
-  useEffect(() => {
-    scene.traverse((object) => {
-      if ("isMesh" in object && object.isMesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-      }
-    });
   }, [scene]);
 
   return (
@@ -138,18 +130,13 @@ function Scene({ onLockChange }: { onLockChange: (locked: boolean) => void }) {
   return (
     <>
       <color attach="background" args={["#171717"]} />
-      <ambientLight intensity={0.65} />
-      <hemisphereLight args={["#f4f4f5", "#3f3f46", 1.1]} />
-      <directionalLight
-        castShadow
-        position={[4, 8, 3]}
-        intensity={1.4}
-        shadow-mapSize={[1024, 1024]}
-        shadow-bias={-0.0001}
-      />
       <Suspense fallback={<LoadingModel />}>
         <RoomModel />
       </Suspense>
+      <mesh position={[0, 2.51, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[5, 8]} />
+        <meshBasicMaterial color="#d8d8d4" side={DoubleSide} />
+      </mesh>
       <FirstPersonController onLockChange={onLockChange} />
     </>
   );
@@ -161,7 +148,6 @@ export default function RoomViewer() {
   return (
     <main className="relative h-dvh w-screen overflow-hidden bg-neutral-950">
       <Canvas
-        shadows
         dpr={[1, 1.5]}
         camera={{ position: [0, EYE_HEIGHT, 0], fov: 65, near: 0.05, far: 1000 }}
         gl={{ antialias: true, powerPreference: "high-performance" }}
@@ -191,4 +177,4 @@ export default function RoomViewer() {
   );
 }
 
-useGLTF.preload("/room.glb");
+useGLTF.preload(MODEL_URL);
